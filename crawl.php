@@ -1,6 +1,9 @@
 <?php
 include "classes/DomDocumentParser.php";
 
+$alreadyCrawled = array();
+$Crawling       = array();
+
 function createLink($src, $url){
   
   $scheme = parse_url($url)["scheme"];
@@ -21,8 +24,31 @@ function createLink($src, $url){
   return $src;
 }
 
+function getDetails($url) {
+  $parsar = new DomDocumentParsar($url);
+
+  $titleArray = $parsar->getTitleTag();
+
+  if(sizeof($titleArray) == 0 || $titleArray->item(0) == NULL) {
+    return;
+  }
+
+  $title = $titleArray->item(0)->nodeValue;
+  $title = str_replace("\n", "", $title);
+
+  if($title == "") {
+    return;
+  }
+
+  echo "URL: $url, Title: $title<br>";
+}
+
 
 function followLinks($url) {
+
+  global $alreadyCrawled;
+  global $crawling;
+
   $parsar = new DomDocumentParsar($url);
 
   $linkList = $parsar->getLinks();
@@ -35,16 +61,30 @@ function followLinks($url) {
     } elseif(substr($href, 0, 11 )  =="javascript:") {
       continue;
     }
-    
+
     $href = createLink($href,$url);
 
-    echo $href . "<br>";
+    if(!in_array($href, $alreadyCrawled)) {
+      $alreadyCrawled[] = $href;
+      $crawling[] = $href;
+
+      getDetails($href);
+    }else {
+      return;
+    }
+
+  }
+
+  array_shift($crawling);
+
+  foreach($crawling as $site) {
+    followLinks($site);
   }
 }
 
 
 
-$startUrl = "https://google.com";
+$startUrl = "https://www.bbc.com/";
 followLinks($startUrl);
 
 ?>
