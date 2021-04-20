@@ -4,6 +4,8 @@ include("config.php");
 
 $alreadyCrawled = array();
 $Crawling       = array();
+$alreadyFoundImages = array();
+
 
 function linkExists($url)
 {
@@ -31,6 +33,21 @@ function insertLink($url,$title,$description,$keywords) {
   return $query->execute();
 }
 
+function insertImage($url, $src, $alt, $title)
+{
+  global $con;
+
+  $query = $con->prepare("INSERT INTO images(siteUrl, imageUrl, alt, title)
+                  VALUES(:siteUrl, :imageUrl, :alt, :title)");
+
+  $query->bindParam(":siteUrl", $url);
+  $query->bindParam(":imageUrl", $src);
+  $query->bindParam(":alt", $alt);
+  $query->bindParam(":title", $title);
+
+  return $query->execute();
+}
+
 function createLink($src, $url){
   
   $scheme = parse_url($url)["scheme"];
@@ -52,6 +69,8 @@ function createLink($src, $url){
 }
 
 function getDetails($url) {
+  global $alreadyFoundImages;
+
   $parsar = new DomDocumentParsar($url);
 
   $titleArray = $parsar->getTitleTag();
@@ -67,7 +86,6 @@ function getDetails($url) {
     return;
   }
 
-
   $description = "";
   $keywords = "";
 
@@ -78,26 +96,40 @@ function getDetails($url) {
       $description = $meta->getAttribute("content");
     }
     if($meta->getAttribute("name") == "keywords") {
-      var_dump($keywords);
       $keywords = $meta->getAttribute("content");
     }
-
-    
   }
 
     $description = str_replace("\n", "", $description);
     $keywords = str_replace("\n", "", $keywords);
 
     if(linkExists($url)) {
-      echo "link is already exists";
+      echo "link is already exists <br>" ;
     } elseif(insertLink($url,$title,$description,$keywords)) {
       echo "success";
     } else {
       echo "error : fail to insert ". $url;
     }
 
-    
-  echo "URL: $url, Desc: $description , key: $keywords <br>";
+    $imageArray = $parsar->getImages();
+    foreach($imageArray as $image) {
+      $src = $image->getAttribute("src");
+      $alt = $image->getAttribute("alt");
+      $title = $image->getAttribute("title");
+      
+      if(!isset($title) && !isset($alt)) {
+        continue;
+      }
+    }
+
+    $src = createLink($src, $url);
+
+    if(!in_array($src, $alreadyFoundImages)) {
+      $alreadyFoundImages[] = $src;
+    }
+
+    insertImage($url,$src,$alt,$title);
+
 }
 
 
@@ -126,9 +158,10 @@ function followLinks($url) {
       $crawling[] = $href;
 
       getDetails($href);
-    }else {
-      return;
     }
+    // else {
+    //   return;
+    // }
 
   }
 
