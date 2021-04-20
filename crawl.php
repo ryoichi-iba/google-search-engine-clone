@@ -1,8 +1,23 @@
 <?php
-include "classes/DomDocumentParser.php";
+include("classes/DomDocumentParser.php");
+include("config.php");
 
 $alreadyCrawled = array();
 $Crawling       = array();
+
+function insertLink($url,$title,$description,$keywords) {
+  global $con;
+
+  $query = $con->prepare("INSERT INTO sites(url, title, description, keywords)
+                  VALUES(:url, :title, :description, :keywords)");
+
+  $query->bindParam(":url" , $url);
+  $query->bindParam(":title" , $title);
+  $query->bindParam(":description" , $description);
+  $query->bindParam(":keywords" , $keywords);
+
+  return $query->execute();
+}
 
 function createLink($src, $url){
   
@@ -40,7 +55,31 @@ function getDetails($url) {
     return;
   }
 
-  echo "URL: $url, Title: $title<br>";
+
+  $description = "";
+  $keywords = "";
+
+  $metaArray = $parsar->getMetaTags();
+
+  foreach($metaArray as $meta) {
+    if($meta->getAttribute("name") == "description") {
+      $description = $meta->getAttribute("content");
+    }
+    if($meta->getAttribute("name") == "keywords") {
+      var_dump($keywords);
+      $keywords = $meta->getAttribute("content");
+    }
+
+    
+  }
+
+    $description = str_replace("\n", "", $description);
+    $keywords = str_replace("\n", "", $keywords);
+
+    
+
+    insertLink($url,$title,$description,$keywords);
+  echo "URL: $url, Desc: $description , key: $keywords <br>";
 }
 
 
@@ -84,7 +123,7 @@ function followLinks($url) {
 
 
 
-$startUrl = "https://www.bbc.com/";
+$startUrl = "https://www.bbc.com";
 followLinks($startUrl);
 
 ?>
