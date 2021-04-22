@@ -61,12 +61,15 @@ $type = isset($_GET["type"]) ? $type = $_GET["type"] : $type =  "sites";
       </div>
     </div>
 
-    <div class="mainResulutsSection">
-      <?php 
-        $resultsProvider = new SiteResultsProvider($con);
-        
-        echo $resultsProvider->getNumResults($term);
-        ?>
+    <div class="mainResultsSection">
+      <?php
+      $resultsProvider = new SiteResultsProvider($con);
+
+      $numResults = $resultsProvider->getNumResults($term);
+      echo "<p class='resultsCount'>$numResults results found</p>";
+
+      echo $resultsProvider->getResultsHtml(1,20,$term);
+      ?>
     </div>
 
   </div>
